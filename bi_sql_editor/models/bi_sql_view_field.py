@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright (C) 2017 - Today: GRAP (http://www.grap.coop)
 # @author: Sylvain LE GAL (https://twitter.com/legalsylvain)
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl.html).
@@ -11,6 +10,7 @@ from odoo.exceptions import UserError
 
 class BiSQLViewField(models.Model):
     _name = 'bi.sql.view.field'
+    _description = 'Bi SQL View Field'
     _order = 'sequence'
 
     _TTYPE_SELECTION = [
@@ -45,7 +45,7 @@ class BiSQLViewField(models.Model):
         'numeric': 'float',
         'text': 'char',
         'character varying': 'char',
-        'date': 'datetime',
+        'date': 'date',
         'timestamp without time zone': 'datetime',
     }
 
@@ -130,7 +130,7 @@ class BiSQLViewField(models.Model):
         # Don't execute as simple .get() in the dict to manage
         # correctly the type 'character varying(x)'
         ttype = False
-        for k, v in self._SQL_MAPPING.iteritems():
+        for k, v in self._SQL_MAPPING.items():
             if k in vals['sql_type']:
                 ttype = v
 
@@ -227,7 +227,10 @@ class BiSQLViewField(models.Model):
         self.ensure_one()
         res = ''
         if self.field_description and self.is_group_by:
-            res =\
-                """<filter string="%s" context="{'group_by':'%s'}"/>""" % (
-                    self.field_description, self.name)
+            res = \
+                """<filter name="%s" string="%s"
+                        context="{'group_by':'%s'}"/>""" % (
+                    self.field_description.lower().replace(' ', '_'),
+                    self.field_description, self.name
+                )
         return res

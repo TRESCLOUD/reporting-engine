@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright (C) 2017 - Today: GRAP (http://www.grap.coop)
 # @author: Sylvain LE GAL (https://twitter.com/legalsylvain)
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl.html).
@@ -9,24 +8,54 @@ from psycopg2 import ProgrammingError
 
 from odoo import _, api, fields, models, SUPERUSER_ID
 from odoo.exceptions import UserError
+from odoo.addons.base.ir.ir_model import IrModel
 
 _logger = logging.getLogger(__name__)
 
+def encode(s):
+    """ Return an UTF8-encoded version of ``s``. """
+    return s.encode('utf8') if isinstance(s, unicode) else s
 
-class BaseModel(models.AbstractModel):
-    _inherit = 'base'
+def existing_tables(cr, tablenames):
+    """ Return the names of existing tables among ``tablenames``. """
+    query = """
+        SELECT c.relname
+          FROM pg_class c
+          JOIN pg_namespace n ON (n.oid = c.relnamespace)
+         WHERE c.relname IN %s
+           AND c.relkind IN ('r', 'v', 'm')
+           AND n.nspname = 'public'
+    """
+    cr.execute(query, [tuple(tablenames)])
+    return [row[0] for row in cr.fetchall()]
 
-    @api.model_cr_context
-    def _auto_init(self):
-        if self._name.startswith(BiSQLView._model_prefix):
-            self._auto = False
-        return super(BaseModel, self)._auto_init()
+def table_exists(cr, tablename):
+    """ Return whether the given table exists. """
+    return len(existing_tables(cr, {tablename})) == 1
 
-    @api.model_cr_context
-    def _auto_end(self):
-        if self._name.startswith(BiSQLView._model_prefix):
-            self._foreign_keys = set()
-        return super(BaseModel, self)._auto_end()
+@api.model
+def _instanciate(self, model_data):
+    """ Return a class for the custom model given by
+    parameters ``model_data``. """
+    # This monkey patch is meant to avoid create/search tables for those
+    # materialized views. Doing "super" doesn't work.
+    class CustomModel(models.Model):
+        _name = encode(model_data['model'])
+        _description = model_data['name']
+        _module = False
+        _custom = True
+        _transient = bool(model_data['transient'])
+        __doc__ = model_data['info']
+
+    # START OF patch
+    if model_data['model'].startswith(BiSQLView._model_prefix):
+        CustomModel._auto = False
+        CustomModel._abstract = True
+    # END of patch
+    return CustomModel
+
+
+IrModel._instanciate = _instanciate
 
 
 class BiSQLView(models.Model):
@@ -211,7 +240,9 @@ class BiSQLView(models.Model):
     @api.multi
     def unlink(self):
         if any(view.state not in ('draft', 'sql_valid') for view in self):
-            raise UserError(_("You can only unlink draft views"))
+            raise UserError(
+                _("You can only unlink draft views."
+                  "If you want to delete them, first set them to draft."))
         return super(BiSQLView, self).unlink()
 
     @api.multi
@@ -219,8 +250,8 @@ class BiSQLView(models.Model):
         self.ensure_one()
         default = dict(default or {})
         default.update({
-            'name': _('%s (Copy)') % (self.name),
-            'technical_name': '%s_copy' % (self.technical_name),
+            'name': _('%s (Copy)') % self.name,
+            'technical_name': '%s_copy' % self.technical_name,
         })
         return super(BiSQLView, self).copy(default=default)
 
@@ -231,7 +262,7 @@ class BiSQLView(models.Model):
             if sql_view.state != 'sql_valid':
                 raise UserError(_(
                     "You can only process this action on SQL Valid items"))
-            # Create ORM and acess
+            # Create ORM and access
             sql_view._create_model_and_fields()
             sql_view._create_model_access()
 
@@ -337,19 +368,20 @@ class BiSQLView(models.Model):
     def _prepare_cron(self):
         self.ensure_one()
         return {
-            'name': _('Refresh Materialized View %s') % (self.view_name),
+            'name': _('Refresh Materialized View %s') % self.view_name,
             'user_id': SUPERUSER_ID,
-            'model': 'bi.sql.view',
-            'function': '_refresh_materialized_view_cron',
+            'model_id': self.env['ir.model'].search([
+                ('model', '=', self._name)], limit=1).id,
+            'state': 'code',
+            'code': 'model._refresh_materialized_view_cron(%s)' % self.ids,
             'numbercall': -1,
-            'args': repr(([self.id],))
         }
 
     @api.multi
     def _prepare_rule(self):
         self.ensure_one()
         return {
-            'name': _('Access %s') % (self.name),
+            'name': _('Access %s') % self.name,
             'model_id': self.model_id.id,
             'domain_force': self.domain_force,
             'global': True,
@@ -379,7 +411,7 @@ class BiSQLView(models.Model):
             'model': self.model_id.model,
             'arch':
                 """<?xml version="1.0"?>"""
-                """<graph string="Analysis" type="pivot" stacked="True">{}"""
+                """<graph string="Analysis" type="bar" stacked="True">{}"""
                 """</graph>""".format("".join(
                     [x._prepare_graph_field()
                         for x in self.bi_sql_view_field_ids]))
@@ -455,13 +487,13 @@ class BiSQLView(models.Model):
         return {
             'name': self.name,
             'parent_id': self.env.ref('bi_sql_editor.menu_bi_sql_editor').id,
-            'action': 'ir.actions.act_window,%s' % (self.action_id.id),
+            'action': 'ir.actions.act_window,%s' % self.action_id.id,
             'sequence': self.sequence,
         }
 
     # Custom Section
     def _log_execute(self, req):
-        _logger.info("Executing SQL Request %s ..." % (req))
+        _logger.info("Executing SQL Request %s ..." % req)
         self.env.cr.execute(req)
 
     @api.multi
@@ -504,8 +536,9 @@ class BiSQLView(models.Model):
             sql_view.rule_id = self.env['ir.rule'].create(
                 self._prepare_rule()).id
             # Drop table, created by the ORM
-            req = "DROP TABLE %s" % (sql_view.view_name)
-            self._log_execute(req)
+            if table_exists(self._cr, sql_view.view_name):
+                req = "DROP TABLE %s" % sql_view.view_name
+                self._log_execute(req)
 
     @api.multi
     def _create_model_access(self):
@@ -538,7 +571,7 @@ class BiSQLView(models.Model):
             WHERE   attrelid = '%s'::regclass
             AND     NOT attisdropped
             AND     attnum > 0
-            ORDER   BY attnum;""" % (self.view_name)
+            ORDER   BY attnum;""" % self.view_name
         self._log_execute(req)
         return self.env.cr.fetchall()
 
@@ -560,7 +593,7 @@ class BiSQLView(models.Model):
                 my_query.*
             FROM
                 (%s) as my_query
-        """ % (self.query)
+        """ % self.query
         return "CREATE %s VIEW %s AS (%s);" % (
             self.materialized_text, self.view_name, query)
 
@@ -608,7 +641,11 @@ class BiSQLView(models.Model):
 
     @api.model
     def _refresh_materialized_view_cron(self, view_ids):
-        sql_views = self.browse(view_ids)
+        sql_views = self.search([
+            ('is_materialized', '=', True),
+            ('state', 'in', ['model_valid', 'ui_valid']),
+            ('id', 'in', view_ids),
+        ])
         return sql_views._refresh_materialized_view()
 
     @api.multi
