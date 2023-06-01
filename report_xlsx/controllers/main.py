@@ -53,6 +53,7 @@ class ReportController(ReportController):
         requestcontent = json.loads(data)
         url, report_type = requestcontent[0], requestcontent[1]
         if report_type == "xlsx":
+            reportname = '???'
             try:
                 reportname = url.split("/report/xlsx/")[1].split("?")[0]
                 docids = None
