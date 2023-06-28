@@ -7,11 +7,11 @@
     "version": "16.0.1.0.5",
     "category": "Reporting",
     "license": "AGPL-3",
-    "author": "XCG Consulting, ACSONE SA/NV, Odoo Community Association (OCA)",
+    "author": "XCG Consulting," "ACSONE SA/NV," "Odoo Community Association (OCA)",
     "website": "https://github.com/OCA/reporting-engine",
     "depends": ["web"],
     "external_dependencies": {
-        "python": ["py3o.template", "py3o.formats"],
+        "python": ["py3o.template", "py3o.formats", "PyPDF2"],
         "deb": ["libreoffice"],
     },
     "assets": {

@@ -1,0 +1,9 @@
+# Extras dependencies for py3o
+lxml
+openpyxl
+py3o.formats
+py3o.template
+PyPDF2
+xlrd
+xlsxwriter
+
