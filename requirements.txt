@@ -2,3 +2,7 @@
 lxml
 xlrd
 xlsxwriter
+openpyxl
+py3o.formats
+py3o.template
+PyPDF2
