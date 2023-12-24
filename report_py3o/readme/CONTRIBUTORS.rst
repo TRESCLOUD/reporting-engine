@@ -5,3 +5,4 @@
 * Omar Castiñeira <omar@comunitea.com>
 * Holger Brunn <hbrunn@therp.nl>
 * Phuc Tran Thanh <phuc@trobz.com>
+* Alexandre D. Díaz (`Grupo Isonor <alexandrediaz@grupoisonor.es>`_)

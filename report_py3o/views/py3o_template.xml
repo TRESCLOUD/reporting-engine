@@ -47,7 +47,7 @@
     </record>
     <menuitem
         id="py3o_template_configuration_menu"
-        parent="py3o_config_menu"
+        parent="base.reporting_menuitem"
         action="py3o_template_configuration_action"
     />
 </odoo>
