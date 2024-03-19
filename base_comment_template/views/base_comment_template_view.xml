@@ -71,11 +71,12 @@
                             <field name="domain" />
                             <field name="models" />
                             <field name="partner_ids" widget="many2many_tags" />
+                            <field name="engine" groups="base.group_no_one" />
                         </group>
                     </group>
                     <notebook>
                         <page name="text" string="Comment">
-                            <field name="text" />
+                            <field name="text" options="{'codeview': true}" />
                         </page>
                     </notebook>
                 </sheet>

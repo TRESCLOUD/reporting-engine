@@ -12,7 +12,6 @@ from odoo.tools import html_escape
 from odoo.addons.web.controllers.report import ReportController
 
 
-
 class ReportController(ReportController):
     @route()
     def report_routes(self, reportname, docids=None, converter=None, **data):

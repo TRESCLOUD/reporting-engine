@@ -3,6 +3,8 @@
 # Copyright 2020 NextERP Romania SRL
 # Copyright 2021-2022 Tecnativa - Víctor Martínez
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl.html).
+import markupsafe
+
 from odoo import api, fields, models
 from odoo.osv import expression
 from odoo.tools.safe_eval import safe_eval
@@ -24,7 +26,7 @@ class CommentTemplate(models.AbstractModel):
         compute_sudo=True,
         comodel_name="base.comment.template",
         string="Comment Template",
-        domain=lambda self: [("model_ids", "=", self._name)],
+        domain=lambda self: [("model_ids", "in", self._name)],
         store=True,
         readonly=False,
     )
@@ -32,7 +34,7 @@ class CommentTemplate(models.AbstractModel):
     @api.depends(_comment_template_partner_field_name)
     def _compute_comment_template_ids(self):
         template_model = self.env["base.comment.template"]
-        template_domain = template_model._search_model_ids("=", self._name)
+        template_domain = template_model._search_model_ids("in", self._name)
         for record in self:
             partner = record[self._comment_template_partner_field_name]
             record.comment_template_ids = [(5,)]
@@ -50,15 +52,15 @@ class CommentTemplate(models.AbstractModel):
                     record.comment_template_ids = [(4, template.id)]
 
     def render_comment(
-        self, comment, engine="inline_template", add_context=None, post_process=False
+        self, comment, engine=False, add_context=None, post_process=False
     ):
         self.ensure_one()
         comment_texts = self.env["mail.render.mixin"]._render_template(
             template_src=comment.text,
             model=self._name,
             res_ids=[self.id],
-            engine=engine,
+            engine=engine or comment.engine,
             add_context=add_context,
             post_process=post_process,
         )
-        return comment_texts[self.id] or ""
+        return markupsafe.Markup(comment_texts[self.id]) or ""
