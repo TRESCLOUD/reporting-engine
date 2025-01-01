@@ -1,10 +1,8 @@
 # generated from manifests external_dependencies
-lxml
+cryptography
+endesive
 mock
-openpyxl
-py3o.formats
-py3o.template
-PyPDF2
+lxml
 xlrd
 xlsxwriter
 openpyxl
