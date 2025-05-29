@@ -12,6 +12,7 @@ setuptools.setup(
         'odoo-addon-bi_sql_editor>=15.0dev,<15.1dev',
         'odoo-addon-bi_view_editor>=15.0dev,<15.1dev',
         'odoo-addon-board_eval_context>=15.0dev,<15.1dev',
+        'odoo-addon-kpi_dashboard>=15.0dev,<15.1dev',
         'odoo-addon-report_async>=15.0dev,<15.1dev',
         'odoo-addon-report_csv>=15.0dev,<15.1dev',
         'odoo-addon-report_py3o>=15.0dev,<15.1dev',
@@ -27,6 +28,7 @@ setuptools.setup(
         'odoo-addon-report_xml>=15.0dev,<15.1dev',
         'odoo-addon-sql_export>=15.0dev,<15.1dev',
         'odoo-addon-sql_export_excel>=15.0dev,<15.1dev',
+        'odoo-addon-sql_export_mail>=15.0dev,<15.1dev',
         'odoo-addon-sql_request_abstract>=15.0dev,<15.1dev',
     ],
     classifiers=[
