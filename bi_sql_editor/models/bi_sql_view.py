@@ -3,7 +3,7 @@
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl.html).
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from psycopg2 import ProgrammingError
 from psycopg2.sql import SQL, Identifier
@@ -489,7 +489,7 @@ class BiSQLView(models.Model):
             return self.name
         return "{} ({})".format(
             self.name,
-            datetime.utcnow().strftime("%m/%d/%Y %H:%M:%S UTC"),
+            datetime.now(timezone.utc).strftime("%m/%d/%Y %H:%M:%S UTC"),
         )
 
     def _prepare_menu(self):
@@ -724,7 +724,7 @@ WHERE
                     and sql_field[1] in ("integer", "float")
                     and sql_field[2]
                 ):
-                    model._fields[sql_field[0]].group_operator = sql_field[2]
+                    model._fields[sql_field[0]].aggregator = sql_field[2]
 
     def button_preview_sql_expression(self):
         self.button_validate_sql_expression()
